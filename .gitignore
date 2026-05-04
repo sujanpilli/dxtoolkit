@@ -1,12 +1,46 @@
-.DS*
+.DS_Store
+
+# Python bytecode and caches
 __pycache__/
-*.pyc
-tools/*
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python tooling and test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Python packaging artifacts
+*.egg-info/
+.eggs/
+
+# Local Perl dependencies
+.perl5/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and runtime temp files
+*.log
+*.tmp
+*.pid
+
+# Local/project-specific generated files
 bin/dxtools.conf
-test/debug*
-test/test_database_list/*.dbhooks
-.vscode
 bin/debug*
-*.conf
-# test file
+test/debug*
+
+# Ad-hoc local test script
 bin/a.pl

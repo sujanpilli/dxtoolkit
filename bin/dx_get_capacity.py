@@ -65,8 +65,8 @@ def main(argv):
         return 1
 
     unit = str(args.output_unit or 'G').upper()
-    if unit not in ('K', 'M', 'G', 'T'):
-        print("Option -output_unit can be only K for KB, M for MB, G for GB and T for TB")
+    if unit not in ('K', 'M', 'G'):
+        print("Option -output_unit can be only G for GB, M for MB and K for KB")
         return 1
 
     if args.details is not None and args.dbdetails:
@@ -150,7 +150,7 @@ def main(argv):
 
         if not db_list:
             print(f"There is no DB selected to process on {engine_name}. Please check filter definitions.")
-            ret = 1
+            ret += 1
             continue
 
         for dbref in db_list:
@@ -222,7 +222,7 @@ def main(argv):
                 output.addLine('', '', '', '', '', 'Snapshots total', format_size(cap_hash.get('snapshots_total'), unit), '', '')
                 output.addLine('', '', '', '', '', '', '', 'Snapshots shared', format_size(cap_hash.get('snapshots_shared'), unit))
                 for snap in cap_hash.get('snapshots_list', []):
-                    snap_name = f"Snapshot {toolkit_helpers.convert_from_utc(snap.get('snapshotTimestamp'))}"
+                    snap_name = f"Snapshot {snap.get('snapshotTimestamp')}"
                     output.addLine('', '', '', '', '', '', '', snap_name, format_size(snap.get('space'), unit))
 
         held_array = cap.getStorageContainers()

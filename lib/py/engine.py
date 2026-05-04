@@ -270,29 +270,42 @@ class Engine:
             # fallback: leave session cookies in-memory
             pass
         base = self._base_url()
-        # determine API version
+        ses_version = None
+
         try:
             url_about = f"{base}/resources/json/delphix/about"
             self._print_http('=>', 'GET', url_about)
             r = self._session.get(url_about, timeout=cfg.get('timeout', 60))
-            # print response
             try:
                 txt = r.text
             except Exception:
                 txt = None
             self._print_http('<=', 'GET', url_about, status=getattr(r, 'status_code', None), resp_headers=getattr(r, 'headers', None), resp_body=txt)
             r.raise_for_status()
-            js = r.json()
-            if 'result' in js and 'apiVersion' in js['result']:
-                api = js['result']['apiVersion']
-                ses_version = f"{api.get('major')}.{api.get('minor')}.{api.get('micro')}"
-                self._api = ses_version
-            else:
-                ses_version = None
         except RequestException as e:
             if not silent:
                 print(f"Can't connect to Dephix Engine {engine}: {e}")
             return 1
+
+        # Mirror the Perl client: bootstrap with an old API session, then ask
+        # the engine which API version it supports and reopen the session there.
+        if self.session('1.3.0'):
+            if not silent:
+                print(f"session authentication to {engine} failed.")
+            return 1
+
+        result, _fmt, rc = self.getJSONResult('resources/json/delphix/about')
+        if not rc and result.get('status') == 'OK':
+            api = result.get('result', {}).get('apiVersion') or {}
+            if api:
+                ses_version = f"{api.get('major')}.{api.get('minor')}.{api.get('micro')}"
+                self._api = ses_version
+
+        if ses_version and ses_version != '1.3.0':
+            if self.session(ses_version):
+                if not silent:
+                    print(f"session authentication to {engine} failed.")
+                return 1
 
         # prevalidate: extended password support if requested
         if cfg.get('prevalidate') == 'true':
@@ -335,18 +348,6 @@ class Engine:
         if cfg.get('username'):
             self._user = cfg.get('username')
             self._password = cfg.get('password') or ''
-            # create session for version
-            if ses_version:
-                if self.session(ses_version):
-                    if not silent:
-                        print(f"session authentication to {engine} failed.")
-                    return 1
-            else:
-                # try default session
-                if self.session('1.3.0'):
-                    if not silent:
-                        print(f"session authentication to {engine} failed.")
-                    return 1
 
             if self._password == '':
                 # try read from environment variable if configured

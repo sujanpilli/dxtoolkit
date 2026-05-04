@@ -23,6 +23,7 @@ python3 bin/dx_get_network_tests.py -d <engine> -type latency -remoteaddr all -f
 python3 bin/dx_get_network_tests.py -d <engine> -type throughput -remoteaddr all -last -format csv
 
 python3 bin/dx_get_analytics.py -d <engine> -type standard -i 60 -outdir /tmp -format csv
+```
 
 ## Building standalone binaries (PyInstaller)
 
@@ -31,16 +32,85 @@ Note: For Windows you must build on Windows (PowerShell/cmd) with Python+PyInsta
 
 ```bash
 pip install -r requirements.txt
-tools/build_binaries.sh
+```
+
+Build each Python entrypoint you need with PyInstaller. Example:
+
+```bash
+platform="$(uname -s | tr '[:upper:]' '[:lower:]')"
+if [[ "$platform" == darwin* ]]; then
+  platform="macos"
+else
+  platform="linux"
+fi
+
+mkdir -p "dist/$platform" "build/pyinstaller/$platform"
+for script in bin/*.py; do
+  python3 -m PyInstaller --onefile \
+    --distpath "dist/$platform" \
+    --workpath "build/pyinstaller/$platform" \
+    --specpath "build/pyinstaller/$platform" \
+    "$script"
+done
+```
+
+Converted Python entrypoints currently in `bin/`:
+- `dx_ctl_analytics.py`
+- `dx_ctl_bundle.py`
+- `dx_ctl_network_tests.py`
+- `dx_get_analytics.py`
+- `dx_get_appliance.py`
+- `dx_get_capacity.py`
+- `dx_get_config.py`
+- `dx_get_dsourcesize.py`
+- `dx_get_hierarchy.py`
+- `dx_get_jobs.py`
+- `dx_get_network_tests.py`
+- `dx_get_storage_tests.py`
+
+Windows PowerShell equivalent:
+
+```powershell
+New-Item -ItemType Directory -Force dist/windows, build/pyinstaller/windows | Out-Null
+Get-ChildItem bin\*.py | ForEach-Object {
+  py -m PyInstaller --onefile `
+    --distpath dist/windows `
+    --workpath build/pyinstaller/windows `
+    --specpath build/pyinstaller/windows `
+    $_.FullName
+}
 ```
 
 Environment overrides:
 - `PYTHON_BIN` (default: `python3`)
-- `DIST_DIR` (default: `dist`)
-- `WORK_DIR` (default: `build/pyinstaller`)
+- `DIST_DIR` (default base: `dist`; platform output is `dist/macos`, `dist/linux`, or `dist/windows`)
+- `WORK_DIR` (default base: `build/pyinstaller`; platform work/spec is under `build/pyinstaller/<platform>`)
+
+### Release checklist
+
+1. Ensure your branch is clean and pushed.
+2. Create and push a release tag:
+
+```bash
+git tag v2.4.24.2
+git push origin v2.4.24.2
 ```
 
-The `bin/cli_v2.py` flow now uses these Python scripts to generate:
+3. Confirm workflow run starts in `.github/workflows/build.yml`.
+4. Verify all platform jobs succeed: `centos6`, `centos7`, `oel8`, `ubuntu`, `ubuntu22`, `amazon2023`, `Windows`, `osx`, `osx-m1`.
+5. Verify release assets:
+  - `dxtoolkit2-v<version>-redhat6-installer.tar.gz`
+  - `dxtoolkit2-v<version>-redhat7-installer.tar.gz`
+  - `dxtoolkit2-v<version>-redhat8-installer.tar.gz`
+  - `dxtoolkit2-v<version>-ubuntu1804-installer.tar.gz`
+  - `dxtoolkit2-v<version>-ubuntu2204-installer.tar.gz`
+  - `dxtoolkit2-v<version>-amazon2023-installer.tar.gz`
+  - `dxtoolkit2-v<version>-win64-installer.zip`
+  - `dxtoolkit2-v<version>-osx.tar.gz`
+  - `dxtoolkit2-v<version>-osx-m1.tar.gz`
+6. Publish the draft release after spot-checking one Linux archive, one macOS archive, and the Windows zip.
+
+The `bin/cli_v2.sh` flow uses these scripts to generate:
 - Network latency `*_NL.csv` and throughput `*_NT.csv` into `misc/`.
 - Analytics raw and aggregated CSVs into `analytics/`.
 
